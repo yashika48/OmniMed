@@ -1,0 +1,22 @@
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# Node / Next.js
+node_modules/
+.next/
+
+# Datasets & archives (too big for git)
+ai-core/dataset/
+*.zip
+
+# OS / editor
+.DS_Store
+.env
+
+# Scratch files
+checkmodel.py
+*_old.h5
+best_model_temp.h5

@@ -1,0 +1,64 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --violet: #8b5cf6;
+  --violet-bright: #c4b5fd;
+  --violet-glow: #a855f7;
+  --ink: #e9e9f2;
+  --muted: #9a9ab2;
+  --dim: #5c5c74;
+  --canvas: #08080e;
+  --surface: #101017;
+  --surface-2: #16161f;
+  --hair: rgba(255, 255, 255, 0.07);
+}
+
+html, body {
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+.mono {
+  font-family: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  font-feature-settings: 'tnum' 1;
+}
+
+:where(button, a, input, select, textarea):focus-visible {
+  outline: 2px solid var(--violet);
+  outline-offset: 2px;
+}
+
+@keyframes sweep {
+  0%   { top: -6%; opacity: 0; }
+  12%  { opacity: 1; }
+  88%  { opacity: 1; }
+  100% { top: 104%; opacity: 0; }
+}
+.sweep { animation: sweep 1.6s ease-in-out infinite; }
+
+@keyframes livedot {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.25; }
+}
+.live { animation: livedot 1.8s ease-in-out infinite; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: none; }
+}
+.reveal { animation: fadeUp 0.5s ease both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .sweep, .live, .reveal { animation: none; }
+}
+
+@media print {
+  * { background: #fff !important; color: #000 !important; box-shadow: none !important; border-color: #ccc !important; }
+  .no-print { display: none !important; }
+}

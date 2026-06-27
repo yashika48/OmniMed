@@ -1,0 +1,27 @@
+version: '3.9'
+
+services:
+  backend:
+    build:
+      context: ./backend-api
+      dockerfile: Dockerfile
+    container_name: omnimed-backend
+    ports:
+      - 8000:8000
+    volumes:
+      - ./backend-api:/app
+    environment:
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - PYTHONUNBUFFERED=1
+
+  frontend:
+    build:
+      context: ./frontend-ui
+      dockerfile: Dockerfile
+    container_name: omnimed-frontend
+    ports:
+      - 3000:3000
+    environment:
+      - NEXT_PUBLIC_API_URL=http://backend:8000
+    depends_on:
+      - backend
