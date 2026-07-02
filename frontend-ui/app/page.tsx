@@ -30,12 +30,22 @@ export default function Home() {
 
   const [confidenceThreshold, setConfidenceThreshold] = useState<number>(0);
 
+  // --- Segmentation (Brain MRI only) ---
+  const [segLoading, setSegLoading] = useState(false);
+  const [segData, setSegData] = useState<{
+    overlayUrl: string;
+    maskUrl: string;
+    tumorDetected: boolean;
+    areaRatio: number;
+  } | null>(null);
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
       setFile(selectedFile);
       setPreviewUrl(URL.createObjectURL(selectedFile));
       setPredictionData(null);
+      setSegData(null);
       setRevealed(false);
     }
   };
@@ -102,6 +112,41 @@ export default function Home() {
       alert('Could not reach the backend. Check that the API is running.');
       setIsScanning(false);
       setLoading(false);
+    }
+  };
+
+  // Run U-Net tumor segmentation (Brain MRI only). Separate from classification.
+  const runSegmentation = async () => {
+    if (!file) return;
+    setSegLoading(true);
+    setSegData(null);
+
+    const formData = new FormData();
+    formData.append('file', file);
+
+    try {
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL ?? 'http://127.0.0.1:8000';
+      const response = await fetch(`${backendUrl}/api/segmentation/brain-mri`, {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!response.ok) {
+        throw new Error(`Server status: ${response.status}`);
+      }
+
+      const data = await response.json();
+      setSegData({
+        overlayUrl: data.overlay_image ? `data:image/png;base64,${data.overlay_image}` : '',
+        maskUrl: data.mask_image ? `data:image/png;base64,${data.mask_image}` : '',
+        tumorDetected: Boolean(data.tumor_detected),
+        areaRatio: Number(data.tumor_area_ratio) || 0,
+      });
+    } catch (error) {
+      console.error('Segmentation error:', error);
+      alert('Could not run segmentation. Check that the API is running and the model is loaded.');
+    } finally {
+      setSegLoading(false);
     }
   };
 
@@ -219,7 +264,7 @@ export default function Home() {
               <label className="block text-xs font-medium text-[var(--muted)] mb-1.5">Imaging type</label>
               <select
                 value={selectedModality}
-                onChange={(e) => setSelectedModality(e.target.value)}
+                onChange={(e) => { setSelectedModality(e.target.value); setSegData(null); }}
                 className="w-full bg-[var(--surface-2)] border border-[var(--hair)] rounded-lg px-3 py-2.5 text-sm focus:border-violet-500 focus:outline-none"
               >
                 {modalityOptions.map((o) => (
@@ -272,15 +317,60 @@ export default function Home() {
             </label>
 
             {file && (
-              <button
-                onClick={executeAnalysis}
-                disabled={loading}
-                className="no-print w-full mt-4 bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-colors shadow-[0_0_24px_rgba(139,92,246,0.35)]"
-              >
-                {loading ? 'Analyzing…' : 'Run analysis'}
-              </button>
+              <div className="no-print mt-4 space-y-2">
+                <button
+                  onClick={executeAnalysis}
+                  disabled={loading}
+                  className="w-full bg-violet-600 hover:bg-violet-500 disabled:opacity-50 text-white font-medium py-2.5 px-4 rounded-lg text-sm transition-colors shadow-[0_0_24px_rgba(139,92,246,0.35)]"
+                >
+                  {loading ? 'Analyzing…' : 'Run analysis'}
+                </button>
+
+                {/* Segmentation is only available for Brain MRI */}
+                {selectedModality === 'brain-mri' && (
+                  <button
+                    onClick={runSegmentation}
+                    disabled={segLoading}
+                    className="w-full flex items-center justify-center gap-2 border border-violet-500/40 hover:bg-violet-500/10 disabled:opacity-50 text-violet-200 font-medium py-2.5 px-4 rounded-lg text-sm transition-colors"
+                  >
+                    <Crosshair className="w-4 h-4" /> {segLoading ? 'Segmenting…' : 'Segment tumor (U-Net)'}
+                  </button>
+                )}
+              </div>
             )}
           </section>
+
+          {/* Segmentation result — appears after "Segment tumor" runs */}
+          {segData && (
+            <section className="reveal bg-[var(--surface)] border border-[var(--hair)] rounded-2xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold flex items-center gap-2">
+                  <Crosshair className="w-4 h-4 text-violet-300" /> Tumor segmentation · U-Net
+                </h2>
+                <span className={`text-[11px] px-2 py-0.5 rounded-full border ${segData.tumorDetected ? 'bg-violet-500/15 border-violet-500/30 text-violet-200' : 'bg-white/5 border-[var(--hair)] text-[var(--muted)]'}`}>
+                  {segData.tumorDetected ? 'Tumor detected' : 'No tumor detected'}
+                </span>
+              </div>
+
+              {segData.overlayUrl && (
+                <div className="rounded-xl overflow-hidden border border-[var(--hair)]">
+                  <div className="px-3 py-2 border-b border-[var(--hair)] mono text-[11px] text-[var(--muted)] uppercase tracking-wider">
+                    Predicted tumor region · overlay
+                  </div>
+                  <img src={segData.overlayUrl} alt="Tumor segmentation overlay" className="w-full h-auto object-contain bg-[#05050a]" />
+                </div>
+              )}
+
+              <div className="mt-3 flex justify-between text-[13px]">
+                <span className="text-[var(--muted)]">Tumor area</span>
+                <span className="mono text-violet-200">{(segData.areaRatio * 100).toFixed(2)}% of image</span>
+              </div>
+
+              <p className="text-[11px] text-[var(--dim)] mt-3">
+                Segmentation model trained on LGG FLAIR MRI; results on other MRI sequences may vary.
+              </p>
+            </section>
+          )}
         </div>
 
         {/* RIGHT: findings */}
