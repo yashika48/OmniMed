@@ -27,3 +27,18 @@ def preprocess_image(image: Image.Image, target_size: Tuple[int, int]) -> np.nda
 
 def encode_image_to_base64(image_bytes: bytes) -> str:
     return base64.b64encode(image_bytes).decode("utf-8")
+
+
+def preprocess_for_segmentation(image: Image.Image, target_size: Tuple[int, int] = (256, 256)) -> np.ndarray:
+    """Preprocess an image for the U-Net segmentation model.
+
+    Unlike the EfficientNet classifiers (which rescale internally, so they take
+    raw 0-255 pixels), the U-Net was trained on pixels scaled to [0, 1] at
+    256x256. So segmentation must resize to 256x256 AND divide by 255 -- using
+    the classifier preprocessing here would give a wrong-sized, wrong-scaled
+    input and garbage masks.
+    """
+    image = image.resize(target_size)
+    image_array = np.array(image, dtype=np.float32) / 255.0
+    image_array = np.expand_dims(image_array, axis=0)
+    return image_array
