@@ -10,7 +10,6 @@ It is built as a **platform, not three separate apps**: a single modular FastAPI
 
 ## Demo
 
-> _Add your screenshots here (replace the paths below)._
 
 | Workstation UI | Grad-CAM explainability | Generated report |
 |---|---|---|
@@ -67,7 +66,12 @@ Skin lesion:
 
 > Note the **clinically sensible error profile**: both screening models (chest, skin) favour high recall on the dangerous class (pneumonia recall 0.96, malignant recall 0.85) — i.e. they err toward catching positives rather than missing them.
 
-Confusion matrices: `docs/confusion_matrix_brain.png`, `docs/confusion_matrix_chest.png`, `docs/confusion_matrix_skin.png`.
+Confusion matrices: `Brain Mri` <img width="838" height="718" alt="WhatsApp Image 2026-07-01 at 6 48 20 PM" src="https://github.com/user-attachments/assets/2a0e6a76-8d30-4cd0-8226-55bac8dbabff" />
+
+`Chest X-ray`  <img width="720" height="598" alt="WhatsApp Image 2026-07-01 at 6 47 51 PM" src="https://github.com/user-attachments/assets/0c6d54ae-861e-4d78-93c3-3fbe9c9328e2" />
+ 
+`Skin lesion`  <img width="720" height="600" alt="WhatsApp Image 2026-07-01 at 6 47 16 PM" src="https://github.com/user-attachments/assets/d1143321-09c3-4b13-b43e-3b25ec988e02" />
+
 
 ---
 
