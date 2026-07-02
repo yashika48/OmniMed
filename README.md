@@ -75,6 +75,67 @@ Confusion matrices: `Brain Mri` <img width="838" height="718" alt="WhatsApp Imag
 
 ---
 
+
+## Brain tumor segmentation (U-Net)
+
+Beyond classification, OmniMed segments brain tumors at the **pixel level** — for
+every pixel it predicts tumor vs. not-tumor, producing a mask that outlines the
+tumor's shape, not just a class label for the whole scan. This is a distinct task
+from the classifiers above (which answer *what*); segmentation answers *where*.
+
+The model is a **U-Net** (encoder–decoder with skip connections) trained from
+scratch on the LGG MRI Segmentation dataset (FLAIR slices with expert tumor masks).
+
+| Task | Model | Metric | Score |
+|---|---|---|---|
+| Brain tumor segmentation | U-Net (from scratch) | Dice | **~0.60** |
+| | | IoU | **~0.50** |
+
+> On slices that **contain** a tumor, the predicted mask tracks the true boundary
+> closely (see the gallery below). The average Dice is pulled down by the many
+> tumor-free slices in the dataset, where the metric is brittle: a handful of stray
+> pixels on an otherwise-correct empty prediction scores near zero. So the aggregate
+> understates the on-tumor segmentation quality — which the prediction gallery makes
+> visible.
+
+**Prediction gallery** (MRI · ground-truth mask · model prediction):
+
+<img width="991" height="337" alt="colab1 png" src="https://github.com/user-attachments/assets/541cb78c-3987-4524-94ea-91f777722ea7" />
+
+<img width="991" height="337" alt="colab1 png" src="https://github.com/user-attachments/assets/f9414caf-1d4d-4f57-83f7-ef6402fc014e" />
+
+
+
+**In the workstation** — segmentation runs as a Brain-MRI action and overlays the
+predicted tumor region on the scan:
+
+<img width="1600" height="747" alt="colab test png" src="https://github.com/user-attachments/assets/b5c41a2f-6176-410c-8e73-ec5bdaf3070c" />
+
+<img width="1599" height="745" alt="colab tstresult png" src="https://github.com/user-attachments/assets/9d88e84c-e3ec-44b1-a90f-063059076de8" />
+
+
+
+### How it's wired in
+
+Segmentation is served by a dedicated route (`POST /api/segmentation/brain-mri`)
+and a lazily-cached model loader, kept separate from the classification pipeline so
+the two concerns don't entangle. The U-Net is loaded with `compile=False` (its
+custom Dice/IoU objects aren't needed at inference), and inputs are preprocessed to
+the model's trained format (256×256, scaled to [0,1]) — deliberately *different*
+from the EfficientNet classifiers, which take raw 0–255 pixels. The endpoint returns
+a raw mask, a red overlay on the scan, and the predicted tumor-area fraction.
+
+### Honest limitation — domain shift
+
+The segmentation model is trained only on **LGG FLAIR MRI**. On that domain it
+segments tumors well; on **other MRI sequences** (e.g. the plain-grayscale scans in
+the classification dataset) it under-detects, often reporting no tumor. This is a
+textbook **domain-shift** limitation: the model learned "tumor" as it appears in one
+imaging style and doesn't generalize to unseen styles. Closing the gap would require
+multi-source, mask-labeled training data spanning several MRI sequences — noted here
+rather than hidden, and surfaced in the UI itself.
+
+
 ## Architecture
 
 The core design goal is a **platform abstraction that generalizes across modalities**.
@@ -205,6 +266,5 @@ Being explicit about these, because they matter:
 
 ## Future work
 
-- Real tumor **segmentation** (U-Net) for brain MRI using a mask-labeled dataset.
 - Input-modality validation to reject mismatched images.
 - Live deployment + automated test suite + CI.
